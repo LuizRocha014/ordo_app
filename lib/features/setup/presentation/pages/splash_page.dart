@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/ordo_colors.dart';
 import '../../../../core/theme/ordo_typography.dart';
-import '../providers/setup_provider.dart';
+import '../controllers/setup_controller.dart';
 
 /// Splash que dispara `bootstrap()` e decide entre Setup e Home.
 class SplashPage extends StatefulWidget {
@@ -23,12 +23,10 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _decide() async {
-    final setup = context.read<SetupProvider>();
+    final setup = Get.find<SetupController>();
     await setup.bootstrap();
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed(
-      setup.isConfigured ? AppRoutes.home : AppRoutes.setup,
-    );
+    Get.offNamed(setup.isConfigured ? AppRoutes.home : AppRoutes.setup);
   }
 
   @override

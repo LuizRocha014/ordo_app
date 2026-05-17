@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/ordo_colors.dart';
@@ -10,14 +10,14 @@ import '../../../../core/theme/ordo_spacing.dart';
 import '../../../../core/theme/ordo_typography.dart';
 import '../../../../shared/widgets/ordo_icon.dart';
 import '../../domain/entities/shop_type.dart';
-import '../providers/setup_provider.dart';
+import '../controllers/setup_controller.dart';
 
 class SetupPage extends StatelessWidget {
   const SetupPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<SetupProvider>();
+    final controller = Get.find<SetupController>();
 
     return Scaffold(
       backgroundColor: OrdoColors.bone,
@@ -74,24 +74,32 @@ class SetupPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              for (final type in ShopType.values) ...[
-                _ShopTypeTile(
-                  type: type,
-                  loading: provider.loading,
-                  onTap: () async {
-                    final ok = await context.read<SetupProvider>().pick(type);
-                    if (!context.mounted) return;
-                    if (ok) {
-                      Navigator.of(context).pushReplacementNamed(AppRoutes.home);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(provider.error ?? 'Erro')),
-                      );
-                    }
-                  },
-                ),
-                const SizedBox(height: 10),
-              ],
+              Obx(() {
+                final loading = controller.loading.value;
+                return Column(
+                  children: [
+                    for (final type in ShopType.values) ...[
+                      _ShopTypeTile(
+                        type: type,
+                        loading: loading,
+                        onTap: () async {
+                          final ok = await controller.pick(type);
+                          if (ok) {
+                            Get.offAllNamed(AppRoutes.home);
+                          } else {
+                            Get.snackbar(
+                              'Erro',
+                              controller.error.value ?? 'Erro',
+                              snackPosition: SnackPosition.BOTTOM,
+                            );
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                  ],
+                );
+              }),
               const SizedBox(height: OrdoSpacing.s6),
               Center(
                 child: Text(

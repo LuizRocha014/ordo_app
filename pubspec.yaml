@@ -16,8 +16,9 @@ dependencies:
   componentes_lr:
     path: ../Flutter_X_Components_Flutter
 
-  # State management + DI
-  provider: ^6.1.2
+  # State management + navegação reativa
+  get: ^4.6.6
+  # DI dos use cases / repositórios (controllers ficam no GetX)
   get_it: ^7.7.0
 
   # HTTP

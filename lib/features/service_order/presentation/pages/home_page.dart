@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/ordo_colors.dart';
@@ -12,9 +12,9 @@ import '../../../../shared/widgets/kpi_card.dart';
 import '../../../../shared/widgets/ordo_icon.dart';
 import '../../../../shared/widgets/os_card.dart';
 import '../../../../shared/widgets/top_bar.dart';
-import '../../../setup/presentation/providers/setup_provider.dart';
+import '../../../setup/presentation/controllers/setup_controller.dart';
 import '../../domain/entities/os_status.dart';
-import '../providers/service_orders_provider.dart';
+import '../controllers/service_orders_controller.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -24,143 +24,147 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final _setup = Get.find<SetupController>();
+  final _orders = Get.find<ServiceOrdersController>();
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ServiceOrdersProvider>().load();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _orders.load());
   }
 
   void _onTab(OrdoTab tab) {
     if (tab == OrdoTab.list) {
-      Navigator.of(context).pushNamed(AppRoutes.osList);
+      Get.toNamed(AppRoutes.osList);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final shop = context.watch<SetupProvider>().current;
-    final provider = context.watch<ServiceOrdersProvider>();
-
-    final shopName = shop?.shopName ?? 'Ordo';
-    final shopSubtitle = shop?.shopSubtitle ?? 'sua oficina, sob controle';
-
-    final faturadoHoje = provider.items
-        .where((o) =>
-            o.status == OsStatus.entregue &&
-            o.updatedAt.day == DateTime.now().day &&
-            o.updatedAt.month == DateTime.now().month)
-        .fold<int>(0, (sum, o) => sum + o.valueCents);
-
-    final recent = provider.items.take(4).toList();
-
     return Scaffold(
       backgroundColor: OrdoColors.bg,
-      appBar: OrdoTopBar(
-        title: 'Boa tarde, Bruno',
-        subtitle: '$shopName · $shopSubtitle',
-        trailing: [
-          OrdoIconButton(
-            badgeColor: OrdoColors.lime,
-            onTap: () {},
-            child: const OrdoIcon(
-              OrdoIconName.bell,
-              size: 20,
-              color: OrdoColors.ink,
-            ),
-          ),
-        ],
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(76),
+        child: Obx(() {
+          final shop = _setup.current.value;
+          final shopName = shop?.shopName ?? 'Ordo';
+          final shopSubtitle = shop?.shopSubtitle ?? 'sua oficina, sob controle';
+          return OrdoTopBar(
+            title: 'Boa tarde, Bruno',
+            subtitle: '$shopName · $shopSubtitle',
+            trailing: [
+              OrdoIconButton(
+                badgeColor: OrdoColors.lime,
+                onTap: () {},
+                child: const OrdoIcon(
+                  OrdoIconName.bell,
+                  size: 20,
+                  color: OrdoColors.ink,
+                ),
+              ),
+            ],
+          );
+        }),
       ),
       body: Stack(
         children: [
           RefreshIndicator(
             color: OrdoColors.ink,
             backgroundColor: OrdoColors.paper,
-            onRefresh: () => context.read<ServiceOrdersProvider>().load(),
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(
-                OrdoSpacing.screenPadding,
-                8,
-                OrdoSpacing.screenPadding,
-                140,
-              ),
-              children: [
-                _KpiGrid(
-                  andamento: provider.countAndamento,
-                  aguardando: provider.countAguardando,
-                  prontas: provider.countProntas,
-                  faturado: faturadoHoje,
+            onRefresh: _orders.load,
+            child: Obx(() {
+              final loading = _orders.loading.value;
+              final items = _orders.items;
+              final recent = items.take(4).toList();
+
+              final faturadoHoje = items
+                  .where((o) =>
+                      o.status == OsStatus.entregue &&
+                      o.updatedAt.day == DateTime.now().day &&
+                      o.updatedAt.month == DateTime.now().month)
+                  .fold<int>(0, (sum, o) => sum + o.valueCents);
+
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(
+                  OrdoSpacing.screenPadding,
+                  8,
+                  OrdoSpacing.screenPadding,
+                  140,
                 ),
-                if (provider.countStale > 0) ...[
+                children: [
+                  _KpiGrid(
+                    andamento: _orders.countAndamento,
+                    aguardando: _orders.countAguardando,
+                    prontas: _orders.countProntas,
+                    faturado: faturadoHoje,
+                  ),
+                  if (_orders.countStale > 0) ...[
+                    const SizedBox(height: OrdoSpacing.s4),
+                    _StaleBanner(count: _orders.countStale),
+                  ],
                   const SizedBox(height: OrdoSpacing.s4),
-                  _StaleBanner(count: provider.countStale),
-                ],
-                const SizedBox(height: OrdoSpacing.s4),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'OS recentes',
-                      style: OrdoTypography.display(
-                        size: 16,
-                        weight: FontWeight.w600,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'OS recentes',
+                        style: OrdoTypography.display(
+                          size: 16,
+                          weight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () =>
-                          Navigator.of(context).pushNamed(AppRoutes.osList),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Ver todas',
-                            style: OrdoTypography.body(
-                              size: 12,
-                              weight: FontWeight.w500,
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => Get.toNamed(AppRoutes.osList),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Ver todas',
+                              style: OrdoTypography.body(
+                                size: 12,
+                                weight: FontWeight.w500,
+                                color: OrdoColors.fg2,
+                              ),
+                            ),
+                            const SizedBox(width: 2),
+                            const OrdoIcon(
+                              OrdoIconName.chevronRight,
+                              size: 14,
                               color: OrdoColors.fg2,
                             ),
-                          ),
-                          const SizedBox(width: 2),
-                          const OrdoIcon(
-                            OrdoIconName.chevronRight,
-                            size: 14,
-                            color: OrdoColors.fg2,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                if (provider.loading && recent.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: OrdoColors.ink,
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  if (loading && recent.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 24),
+                      child: Center(
+                        child: CircularProgressIndicator(color: OrdoColors.ink),
                       ),
-                    ),
-                  )
-                else if (recent.isEmpty)
-                  const _EmptyState(
-                    text:
-                        'Nenhuma OS aberta esta semana.\nToque em + para abrir a primeira.',
-                  )
-                else
-                  for (final os in recent) ...[
-                    OSCard(
-                      order: os,
-                      onTap: () => Navigator.of(context).pushNamed(
-                        AppRoutes.osDetail,
-                        arguments: os.id,
+                    )
+                  else if (recent.isEmpty)
+                    const _EmptyState(
+                      text:
+                          'Nenhuma OS aberta esta semana.\nToque em + para abrir a primeira.',
+                    )
+                  else
+                    for (final os in recent) ...[
+                      OSCard(
+                        order: os,
+                        onTap: () => Get.toNamed(
+                          AppRoutes.osDetail,
+                          arguments: os.id,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-              ],
-            ),
+                      const SizedBox(height: 8),
+                    ],
+                ],
+              );
+            }),
           ),
           Positioned(
             left: 0,
@@ -169,7 +173,7 @@ class _HomePageState extends State<HomePage> {
             child: OrdoBottomNav(
               active: OrdoTab.home,
               onSelect: _onTab,
-              onNew: () => Navigator.of(context).pushNamed(AppRoutes.novaOs),
+              onNew: () => Get.toNamed(AppRoutes.novaOs),
             ),
           ),
         ],
@@ -303,7 +307,7 @@ class _EmptyState extends StatelessWidget {
       decoration: BoxDecoration(
         color: OrdoColors.paper,
         borderRadius: BorderRadius.circular(OrdoRadius.md),
-        border: Border.all(color: OrdoColors.border, style: BorderStyle.solid),
+        border: Border.all(color: OrdoColors.border),
       ),
       child: Text(
         text,

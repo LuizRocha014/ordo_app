@@ -1,6 +1,6 @@
 import 'package:componentes_lr/componentes_lr.dart' show phoneMask;
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/ordo_colors.dart';
@@ -11,11 +11,11 @@ import '../../../../shared/widgets/ordo_button.dart';
 import '../../../../shared/widgets/ordo_field.dart';
 import '../../../../shared/widgets/ordo_icon.dart';
 import '../../../../shared/widgets/top_bar.dart';
-import '../../../setup/presentation/providers/setup_provider.dart';
-import '../providers/nova_os_provider.dart';
+import '../../../setup/presentation/controllers/setup_controller.dart';
+import '../controllers/nova_os_controller.dart';
 
 /// Campo dinâmico por categoria — `id` casa com `equipmentFields[id]`
-/// no provider.
+/// no controller.
 class _EquipmentField {
   final String id;
   final String label;
@@ -131,20 +131,20 @@ class NovaOsPage extends StatefulWidget {
 }
 
 class _NovaOsPageState extends State<NovaOsPage> {
+  final _setup = Get.find<SetupController>();
+  final _controller = Get.find<NovaOsController>();
+
   final _clientNameCtl = TextEditingController();
   final _clientPhoneCtl = TextEditingController();
   final _problemCtl = TextEditingController();
   final Map<String, TextEditingController> _equipCtls = {};
-  final _form = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final shop = context.read<SetupProvider>().current;
-      if (shop != null) {
-        context.read<NovaOsProvider>().loadTemplate(shop.id);
-      }
+      final shop = _setup.current.value;
+      if (shop != null) _controller.loadTemplate(shop.id);
     });
   }
 
@@ -163,11 +163,10 @@ class _NovaOsPageState extends State<NovaOsPage> {
       _equipCtls.putIfAbsent(id, () => TextEditingController());
 
   Future<void> _submit() async {
-    final shop = context.read<SetupProvider>().current;
+    final shop = _setup.current.value;
     if (shop == null) return;
-    final provider = context.read<NovaOsProvider>();
 
-    provider
+    _controller
       ..clientName = _clientNameCtl.text
       ..clientPhone = _clientPhoneCtl.text
       ..problem = _problemCtl.text
@@ -175,45 +174,48 @@ class _NovaOsPageState extends State<NovaOsPage> {
         for (final entry in _equipCtls.entries) entry.key: entry.value.text,
       };
 
-    final ok = await provider.submit(shopTypeId: shop.id);
-    if (!mounted) return;
+    final ok = await _controller.submit(shopTypeId: shop.id);
     if (ok) {
-      Navigator.of(context).pushReplacementNamed(
+      Get.offNamed(
         AppRoutes.checklist,
-        arguments: provider.created!.id,
+        arguments: _controller.created.value!.id,
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.error ?? 'Não consegui salvar.'),
-        ),
+      Get.snackbar(
+        'Erro',
+        _controller.error.value ?? 'Não consegui salvar.',
+        snackPosition: SnackPosition.BOTTOM,
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final shop = context.watch<SetupProvider>().current;
-    final provider = context.watch<NovaOsProvider>();
-    final fields = _fieldsForShop(shop?.id);
-
-    final productNoun = shop?.productNoun ?? 'serviço';
-    final shopName = shop?.shopName ?? 'Ordo';
-
     return Scaffold(
       backgroundColor: OrdoColors.bg,
-      appBar: OrdoTopBar(
-        title: 'Nova OS de $productNoun',
-        subtitle: shopName,
-        leading: OrdoIconButton(
-          ghost: true,
-          onTap: () => Navigator.of(context).maybePop(),
-          child: const OrdoIcon(OrdoIconName.chevronLeft, size: 22),
-        ),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(76),
+        child: Obx(() {
+          final shop = _setup.current.value;
+          final productNoun = shop?.productNoun ?? 'serviço';
+          final shopName = shop?.shopName ?? 'Ordo';
+          return OrdoTopBar(
+            title: 'Nova OS de $productNoun',
+            subtitle: shopName,
+            leading: OrdoIconButton(
+              ghost: true,
+              onTap: Get.back,
+              child: const OrdoIcon(OrdoIconName.chevronLeft, size: 22),
+            ),
+          );
+        }),
       ),
-      body: Form(
-        key: _form,
-        child: ListView(
+      body: Obx(() {
+        final shop = _setup.current.value;
+        final productNoun = shop?.productNoun ?? 'serviço';
+        final fields = _fieldsForShop(shop?.id);
+
+        return ListView(
           padding: const EdgeInsets.fromLTRB(
             OrdoSpacing.screenPadding,
             0,
@@ -272,24 +274,25 @@ class _NovaOsPageState extends State<NovaOsPage> {
                     label: 'Cancelar',
                     variant: OrdoButtonVariant.secondary,
                     full: true,
-                    onPressed: () => Navigator.of(context).maybePop(),
+                    onPressed: Get.back,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: OrdoButton(
-                    label: 'Continuar',
-                    variant: OrdoButtonVariant.accent,
-                    full: true,
-                    loading: provider.saving,
-                    onPressed: provider.saving ? null : _submit,
-                  ),
+                  child: Obx(() => OrdoButton(
+                        label: 'Continuar',
+                        variant: OrdoButtonVariant.accent,
+                        full: true,
+                        loading: _controller.saving.value,
+                        onPressed:
+                            _controller.saving.value ? null : _submit,
+                      )),
                 ),
               ],
             ),
           ],
-        ),
-      ),
+        );
+      }),
     );
   }
 }
@@ -336,8 +339,7 @@ class _VerticalBanner extends StatelessWidget {
                     ),
                   ),
                   const TextSpan(
-                    text:
-                        '. O checklist correto será gerado ao continuar.',
+                    text: '. O checklist correto será gerado ao continuar.',
                   ),
                 ],
               ),

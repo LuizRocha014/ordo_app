@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 
 import '../../domain/entities/os_status.dart';
 import '../../domain/entities/service_order.dart';
@@ -6,69 +6,63 @@ import '../../domain/usecases/get_service_order.dart';
 import '../../domain/usecases/toggle_checklist_item.dart';
 import '../../domain/usecases/update_os_status.dart';
 
-class ServiceOrderDetailProvider extends ChangeNotifier {
+class ServiceOrderDetailController extends GetxController {
   final GetServiceOrder _get;
   final UpdateOsStatus _update;
   final ToggleChecklistItem _toggle;
 
-  ServiceOrderDetailProvider(this._get, this._update, this._toggle);
+  ServiceOrderDetailController(this._get, this._update, this._toggle);
 
-  ServiceOrder? _order;
-  bool _loading = false;
-  String? _error;
-
-  ServiceOrder? get order => _order;
-  bool get loading => _loading;
-  String? get error => _error;
+  final Rxn<ServiceOrder> order = Rxn<ServiceOrder>();
+  final RxBool loading = false.obs;
+  final RxnString error = RxnString();
 
   Future<void> load(String id) async {
-    _loading = true;
-    _error = null;
-    notifyListeners();
+    loading.value = true;
+    error.value = null;
 
     final result = await _get(id);
     result.fold(
-      onSuccess: (o) => _order = o,
-      onFailure: (f) => _error = f.message,
+      onSuccess: (o) => order.value = o,
+      onFailure: (f) => error.value = f.message,
     );
 
-    _loading = false;
-    notifyListeners();
+    loading.value = false;
   }
 
   Future<bool> changeStatus(OsStatus status) async {
-    if (_order == null) return false;
+    final current = order.value;
+    if (current == null) return false;
+
     final result = await _update(
-      UpdateOsStatusParams(orderId: _order!.id, status: status),
+      UpdateOsStatusParams(orderId: current.id, status: status),
     );
     return result.fold(
       onSuccess: (o) {
-        _order = o;
-        notifyListeners();
+        order.value = o;
         return true;
       },
       onFailure: (f) {
-        _error = f.message;
-        notifyListeners();
+        error.value = f.message;
         return false;
       },
     );
   }
 
   Future<bool> toggleChecklist(String itemId) async {
-    if (_order == null) return false;
+    final current = order.value;
+    if (current == null) return false;
+
     final result = await _toggle(
-      ToggleChecklistItemParams(orderId: _order!.id, itemId: itemId),
+      ToggleChecklistItemParams(orderId: current.id, itemId: itemId),
     );
     return result.fold(
       onSuccess: (o) {
-        _order = o;
-        notifyListeners();
+        order.value = o;
         return true;
       },
       onFailure: (f) {
-        _error = f.message;
-        notifyListeners();
+        error.value = f.message;
         return false;
       },
     );

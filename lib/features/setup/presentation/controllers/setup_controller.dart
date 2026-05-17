@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 
 import '../../../../core/usecases/usecase.dart';
 import '../../domain/entities/shop_type.dart';
@@ -9,60 +9,53 @@ import '../../domain/usecases/save_shop_type.dart';
 /// o app sob).
 ///
 /// `current` é a fonte da verdade pro app inteiro depois do setup —
-/// outros providers leem ele via `read<SetupProvider>().current`.
-class SetupProvider extends ChangeNotifier {
+/// outros controllers leem ele via `Get.find<SetupController>().current.value`.
+class SetupController extends GetxController {
   final GetShopType _get;
   final SaveShopType _save;
 
-  ShopType? _current;
-  bool _loading = false;
-  String? _error;
+  SetupController(this._get, this._save);
 
-  SetupProvider(this._get, this._save);
+  final Rxn<ShopType> current = Rxn<ShopType>();
+  final RxBool loading = false.obs;
+  final RxnString error = RxnString();
 
-  ShopType? get current => _current;
-  bool get loading => _loading;
-  String? get error => _error;
-  bool get isConfigured => _current != null;
+  bool get isConfigured => current.value != null;
 
   Future<void> bootstrap() async {
-    _loading = true;
-    _error = null;
-    notifyListeners();
+    loading.value = true;
+    error.value = null;
 
     final result = await _get(const NoParams());
     result.fold(
       onSuccess: (shop) {
-        _current = shop;
+        current.value = shop;
       },
       onFailure: (f) {
-        _error = f.message;
+        error.value = f.message;
       },
     );
 
-    _loading = false;
-    notifyListeners();
+    loading.value = false;
   }
 
   Future<bool> pick(ShopType type) async {
-    _loading = true;
-    _error = null;
-    notifyListeners();
+    loading.value = true;
+    error.value = null;
 
     final result = await _save(type);
     final ok = result.fold(
       onSuccess: (_) {
-        _current = type;
+        current.value = type;
         return true;
       },
       onFailure: (f) {
-        _error = f.message;
+        error.value = f.message;
         return false;
       },
     );
 
-    _loading = false;
-    notifyListeners();
+    loading.value = false;
     return ok;
   }
 }

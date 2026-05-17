@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 
 import '../../domain/entities/checklist_item.dart';
 import '../../domain/entities/client.dart';
@@ -9,66 +9,60 @@ import '../../domain/usecases/get_checklist_template.dart';
 
 /// Estado do formulário de Nova OS — mantém os campos digitados e
 /// dispara a criação ao final.
-class NovaOsProvider extends ChangeNotifier {
+///
+/// Os campos são mutáveis comuns (não-Rx) porque vivem em `TextField`
+/// controllers e só importam no momento de `submit()`. Os flags
+/// reativos (`saving`, `error`, `created`) sim são `.obs`.
+class NovaOsController extends GetxController {
   final CreateServiceOrder _create;
   final GetChecklistTemplate _template;
 
-  NovaOsProvider(this._create, this._template);
+  NovaOsController(this._create, this._template);
 
   String clientName = '';
   String clientPhone = '';
   Map<String, String> equipmentFields = {};
   String problem = '';
 
-  bool _saving = false;
-  String? _error;
-  ServiceOrder? _created;
-  List<ChecklistItem> _templateItems = const [];
-
-  bool get saving => _saving;
-  String? get error => _error;
-  ServiceOrder? get created => _created;
-  List<ChecklistItem> get templateItems => _templateItems;
+  final RxBool saving = false.obs;
+  final RxnString error = RxnString();
+  final Rxn<ServiceOrder> created = Rxn<ServiceOrder>();
+  final RxList<ChecklistItem> templateItems = <ChecklistItem>[].obs;
 
   void reset() {
     clientName = '';
     clientPhone = '';
     equipmentFields = {};
     problem = '';
-    _created = null;
-    _error = null;
-    _templateItems = const [];
-    notifyListeners();
+    created.value = null;
+    error.value = null;
+    templateItems.clear();
   }
 
   Future<void> loadTemplate(String shopTypeId) async {
     final r = await _template(shopTypeId);
     r.fold(
-      onSuccess: (items) => _templateItems = items,
-      onFailure: (f) => _error = f.message,
+      onSuccess: templateItems.assignAll,
+      onFailure: (f) => error.value = f.message,
     );
-    notifyListeners();
   }
 
   /// Monta o `title` da OS a partir dos campos de equipamento + problema.
-  ///
-  /// Estratégia simples: pega o primeiro campo não-vazio (placa, modelo,
-  /// IMEI etc.) como prefixo e o problema como sufixo curto.
   String _buildTitle(String shopId) {
     final modelo = equipmentFields.values
         .firstWhere((v) => v.trim().isNotEmpty, orElse: () => '');
-    final problemaCurto = problem.length > 40
-        ? '${problem.substring(0, 40)}…'
-        : problem;
-    if (modelo.isEmpty) return problemaCurto.isEmpty ? 'OS aberta' : problemaCurto;
+    final problemaCurto =
+        problem.length > 40 ? '${problem.substring(0, 40)}…' : problem;
+    if (modelo.isEmpty) {
+      return problemaCurto.isEmpty ? 'OS aberta' : problemaCurto;
+    }
     if (problemaCurto.isEmpty) return modelo;
     return '$modelo — $problemaCurto';
   }
 
   Future<bool> submit({required String shopTypeId}) async {
-    _saving = true;
-    _error = null;
-    notifyListeners();
+    saving.value = true;
+    error.value = null;
 
     final now = DateTime.now();
     final draft = ServiceOrder(
@@ -85,23 +79,22 @@ class NovaOsProvider extends ChangeNotifier {
       valueCents: 0,
       openedAt: now,
       updatedAt: now,
-      checklist: _templateItems,
+      checklist: templateItems.toList(),
     );
 
     final result = await _create(CreateServiceOrderParams(draft));
     final ok = result.fold(
       onSuccess: (o) {
-        _created = o;
+        created.value = o;
         return true;
       },
       onFailure: (f) {
-        _error = f.message;
+        error.value = f.message;
         return false;
       },
     );
 
-    _saving = false;
-    notifyListeners();
+    saving.value = false;
     return ok;
   }
 }

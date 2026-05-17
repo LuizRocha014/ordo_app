@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/ordo_colors.dart';
@@ -9,9 +9,9 @@ import '../../../../shared/widgets/bottom_nav.dart';
 import '../../../../shared/widgets/ordo_icon.dart';
 import '../../../../shared/widgets/os_card.dart';
 import '../../../../shared/widgets/top_bar.dart';
-import '../../../setup/presentation/providers/setup_provider.dart';
+import '../../../setup/presentation/controllers/setup_controller.dart';
 import '../../domain/entities/os_status.dart';
-import '../providers/service_orders_provider.dart';
+import '../controllers/service_orders_controller.dart';
 
 class OsListPage extends StatefulWidget {
   const OsListPage({super.key});
@@ -21,21 +21,21 @@ class OsListPage extends StatefulWidget {
 }
 
 class _OsListPageState extends State<OsListPage> {
+  final _setup = Get.find<SetupController>();
+  final _orders = Get.find<ServiceOrdersController>();
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ServiceOrdersProvider>().load();
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _orders.load());
   }
 
   void _onTab(OrdoTab tab) {
     switch (tab) {
       case OrdoTab.home:
-        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+        Get.offNamed(AppRoutes.home);
         break;
       case OrdoTab.list:
-        break;
       case OrdoTab.clients:
       case OrdoTab.settings:
         break;
@@ -44,75 +44,80 @@ class _OsListPageState extends State<OsListPage> {
 
   @override
   Widget build(BuildContext context) {
-    final shop = context.watch<SetupProvider>().current;
-    final provider = context.watch<ServiceOrdersProvider>();
-
-    final productPlural = shop?.productNounPlural ?? 'serviços';
-
     return Scaffold(
       backgroundColor: OrdoColors.bg,
-      appBar: OrdoTopBar(
-        title: 'OS de $productPlural',
-        subtitle: '${provider.items.length} resultados',
-        leading: OrdoIconButton(
-          ghost: true,
-          onTap: () => Navigator.of(context).maybePop(),
-          child: const OrdoIcon(OrdoIconName.chevronLeft, size: 22),
-        ),
-        trailing: [
-          OrdoIconButton(
-            onTap: () {},
-            child: const OrdoIcon(OrdoIconName.search, size: 20),
-          ),
-        ],
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(76),
+        child: Obx(() {
+          final shop = _setup.current.value;
+          final productPlural = shop?.productNounPlural ?? 'serviços';
+          return OrdoTopBar(
+            title: 'OS de $productPlural',
+            subtitle: '${_orders.items.length} resultados',
+            leading: OrdoIconButton(
+              ghost: true,
+              onTap: Get.back,
+              child: const OrdoIcon(OrdoIconName.chevronLeft, size: 22),
+            ),
+            trailing: [
+              OrdoIconButton(
+                onTap: () {},
+                child: const OrdoIcon(OrdoIconName.search, size: 20),
+              ),
+            ],
+          );
+        }),
       ),
       body: Stack(
         children: [
           Column(
             children: [
               const SizedBox(height: 6),
-              _FilterBar(
-                active: provider.statusFilter,
-                onChange: (status) =>
-                    context.read<ServiceOrdersProvider>().setStatusFilter(status),
-              ),
+              Obx(() => _FilterBar(
+                    active: _orders.statusFilter.value,
+                    onChange: _orders.setStatusFilter,
+                  )),
               Expanded(
-                child: provider.loading && provider.items.isEmpty
-                    ? const Center(
-                        child: CircularProgressIndicator(color: OrdoColors.ink),
-                      )
-                    : provider.items.isEmpty
-                        ? Center(
-                            child: Text(
-                              'Nenhuma OS para este filtro.',
-                              style: OrdoTypography.body(
-                                size: 13,
-                                color: OrdoColors.fg2,
-                              ),
-                            ),
-                          )
-                        : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(
-                              OrdoSpacing.screenPadding,
-                              0,
-                              OrdoSpacing.screenPadding,
-                              140,
-                            ),
-                            itemCount: provider.items.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (_, i) {
-                              final os = provider.items[i];
-                              return OSCard(
-                                order: os,
-                                onTap: () =>
-                                    Navigator.of(context).pushNamed(
-                                  AppRoutes.osDetail,
-                                  arguments: os.id,
-                                ),
-                              );
-                            },
-                          ),
+                child: Obx(() {
+                  final loading = _orders.loading.value;
+                  final items = _orders.items;
+                  if (loading && items.isEmpty) {
+                    return const Center(
+                      child: CircularProgressIndicator(color: OrdoColors.ink),
+                    );
+                  }
+                  if (items.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'Nenhuma OS para este filtro.',
+                        style: OrdoTypography.body(
+                          size: 13,
+                          color: OrdoColors.fg2,
+                        ),
+                      ),
+                    );
+                  }
+                  return ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(
+                      OrdoSpacing.screenPadding,
+                      0,
+                      OrdoSpacing.screenPadding,
+                      140,
+                    ),
+                    itemCount: items.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (_, i) {
+                      final os = items[i];
+                      return OSCard(
+                        order: os,
+                        onTap: () => Get.toNamed(
+                          AppRoutes.osDetail,
+                          arguments: os.id,
+                        ),
+                      );
+                    },
+                  );
+                }),
               ),
             ],
           ),
@@ -123,7 +128,7 @@ class _OsListPageState extends State<OsListPage> {
             child: OrdoBottomNav(
               active: OrdoTab.list,
               onSelect: _onTab,
-              onNew: () => Navigator.of(context).pushNamed(AppRoutes.novaOs),
+              onNew: () => Get.toNamed(AppRoutes.novaOs),
             ),
           ),
         ],

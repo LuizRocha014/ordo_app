@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../../../../core/theme/ordo_colors.dart';
 import '../../../../core/theme/ordo_radius.dart';
@@ -12,7 +12,7 @@ import '../../../../shared/widgets/top_bar.dart';
 import '../../domain/entities/os_status.dart';
 import '../../domain/entities/service_order.dart';
 import '../../domain/entities/timeline_event.dart';
-import '../providers/service_order_detail_provider.dart';
+import '../controllers/service_order_detail_controller.dart';
 
 class OsDetailPage extends StatefulWidget {
   final String orderId;
@@ -23,90 +23,95 @@ class OsDetailPage extends StatefulWidget {
 }
 
 class _OsDetailPageState extends State<OsDetailPage> {
+  final _detail = Get.find<ServiceOrderDetailController>();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ServiceOrderDetailProvider>().load(widget.orderId);
+      _detail.load(widget.orderId);
     });
   }
 
   Future<void> _changeStatus() async {
-    final order = context.read<ServiceOrderDetailProvider>().order;
+    final order = _detail.order.value;
     if (order == null) return;
-    final next = await showModalBottomSheet<OsStatus>(
-      context: context,
+    final next = await Get.bottomSheet<OsStatus>(
+      _StatusPicker(current: order.status),
       backgroundColor: OrdoColors.paper,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _StatusPicker(current: order.status),
     );
-    if (next != null && mounted) {
-      await context.read<ServiceOrderDetailProvider>().changeStatus(next);
+    if (next != null) {
+      await _detail.changeStatus(next);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ServiceOrderDetailProvider>();
-    final order = provider.order;
-
-    if (provider.loading || order == null) {
-      return const Scaffold(
-        backgroundColor: OrdoColors.bg,
-        body: Center(child: CircularProgressIndicator(color: OrdoColors.ink)),
-      );
-    }
-
     return Scaffold(
       backgroundColor: OrdoColors.bg,
-      appBar: OrdoTopBar(
-        title: 'OS #${order.id}',
-        subtitle: order.title,
-        leading: OrdoIconButton(
-          ghost: true,
-          onTap: () => Navigator.of(context).maybePop(),
-          child: const OrdoIcon(OrdoIconName.chevronLeft, size: 22),
-        ),
-        trailing: [
-          OrdoIconButton(
-            onTap: () {},
-            child: const OrdoIcon(OrdoIconName.more, size: 20),
-          ),
-        ],
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(76),
+        child: Obx(() {
+          final order = _detail.order.value;
+          return OrdoTopBar(
+            title: 'OS ${order == null ? '' : '#${order.id}'}',
+            subtitle: order?.title,
+            leading: OrdoIconButton(
+              ghost: true,
+              onTap: Get.back,
+              child: const OrdoIcon(OrdoIconName.chevronLeft, size: 22),
+            ),
+            trailing: [
+              OrdoIconButton(
+                onTap: () {},
+                child: const OrdoIcon(OrdoIconName.more, size: 20),
+              ),
+            ],
+          );
+        }),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          OrdoSpacing.screenPadding,
-          0,
-          OrdoSpacing.screenPadding,
-          OrdoSpacing.s6,
-        ),
-        children: [
-          _StatusHero(order: order, onChange: _changeStatus),
-          const SizedBox(height: OrdoSpacing.s4),
-          _SummaryCard(order: order),
-          const SizedBox(height: OrdoSpacing.s5),
-          _PhotosSection(photoCount: order.photoIds.length),
-          const SizedBox(height: OrdoSpacing.s5),
-          _TimelineSection(events: order.timeline),
-          const SizedBox(height: OrdoSpacing.s5),
-          OrdoButton(
-            label: order.status == OsStatus.entregue
-                ? 'OS entregue'
-                : 'Marcar como entregue',
-            variant: OrdoButtonVariant.accent,
-            size: OrdoButtonSize.lg,
-            full: true,
-            onPressed: order.status == OsStatus.entregue
-                ? null
-                : () => context
-                    .read<ServiceOrderDetailProvider>()
-                    .changeStatus(OsStatus.entregue),
+      body: Obx(() {
+        final loading = _detail.loading.value;
+        final order = _detail.order.value;
+        if (loading || order == null) {
+          return const Center(
+            child: CircularProgressIndicator(color: OrdoColors.ink),
+          );
+        }
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(
+            OrdoSpacing.screenPadding,
+            0,
+            OrdoSpacing.screenPadding,
+            OrdoSpacing.s6,
           ),
-        ],
-      ),
+          children: [
+            _StatusHero(order: order, onChange: _changeStatus),
+            const SizedBox(height: OrdoSpacing.s4),
+            _SummaryCard(order: order),
+            const SizedBox(height: OrdoSpacing.s5),
+            _PhotosSection(photoCount: order.photoIds.length),
+            const SizedBox(height: OrdoSpacing.s5),
+            _TimelineSection(events: order.timeline),
+            const SizedBox(height: OrdoSpacing.s5),
+            OrdoButton(
+              label: order.status == OsStatus.entregue
+                  ? 'OS entregue'
+                  : 'Marcar como entregue',
+              variant: OrdoButtonVariant.accent,
+              size: OrdoButtonSize.lg,
+              full: true,
+              onPressed: order.status == OsStatus.entregue
+                  ? null
+                  : () => _detail.changeStatus(OsStatus.entregue),
+            ),
+          ],
+        );
+      }),
     );
   }
 }
@@ -548,7 +553,7 @@ class _StatusPicker extends StatelessWidget {
                 trailing: s == current
                     ? const Icon(Icons.check, color: OrdoColors.ink, size: 18)
                     : null,
-                onTap: () => Navigator.of(context).pop(s),
+                onTap: () => Get.back(result: s),
               ),
           ],
         ),

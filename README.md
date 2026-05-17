@@ -14,10 +14,20 @@ JetBrains Mono).
 ## Stack
 
 - **Flutter** 3.41+ · **Dart** 3.11
-- **Provider** + **get_it** para estado e DI
-- **http** para chamadas externas, **Navigator 1.0** para rotas
+- **GetX** (`get`) para estado reativo (`.obs` / `Obx`) e navegação
+- **get_it** para DI de datasources, repositórios e use cases
+- **http** para chamadas externas, **Navigator 1.0** mantido via `onGenerateRoute`
 - **intl** (pt_BR), **google_fonts** (Space Grotesk / DM Sans / JetBrains Mono)
 - **componentes_lr** como pacote base (path dependency)
+
+### Padrão DI híbrido por camada
+
+- **`sl` (get_it)** registra datasources, repositórios e use cases —
+  peças de domain/data que não conhecem GetX.
+- **`Get.put` / `Get.lazyPut`** registra **controllers** (`GetxController`).
+  Controllers recebem use cases injetados a partir do `sl()` na construção.
+- Páginas obtêm controllers via `Get.find<T>()` e renderizam reativo
+  com `Obx(() => ...)`.
 
 ---
 
@@ -39,14 +49,14 @@ lib/
 │   ├── setup/                   primeiro launch — escolha do tipo
 │   │   ├── domain/  entities, repositories, usecases
 │   │   ├── data/    datasource SharedPreferences + repo impl
-│   │   └── presentation/  splash, setup, provider
+│   │   └── presentation/  splash, setup, SetupController (GetX)
 │   └── service_order/           núcleo do app
 │       ├── domain/  ServiceOrder, OsStatus, ChecklistItem,
 │       │            TimelineEvent, Client + 6 usecases
 │       ├── data/    models JSON-ready, datasource in-memory
 │       │            com seed por categoria, repo impl
 │       └── presentation/  Home / OsList / NovaOs / Checklist /
-│                          OsDetail + 3 providers
+│                          OsDetail + 3 GetxControllers
 └── shared/
     ├── utils/formatters.dart    BRL, datas PT-BR, relativeDay
     └── widgets/                 OrdoButton, OrdoField, OSCard,

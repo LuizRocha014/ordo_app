@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:get/get.dart';
 
 import '../../domain/entities/os_status.dart';
 import '../../domain/entities/service_order.dart';
@@ -8,27 +8,21 @@ import '../../domain/usecases/update_os_status.dart';
 
 /// Estado da lista de OS (home + lista filtrada).
 ///
-/// Tem um filtro por status interno; chamando `setFilter()` o provider
-/// recarrega a lista. KPIs derivam da última lista carregada sem
-/// filtro.
-class ServiceOrdersProvider extends ChangeNotifier {
+/// Tem um filtro por status interno; chamando `setStatusFilter()` o
+/// controller recarrega a lista. KPIs derivam da última lista sem
+/// filtro (mantida em `_all`).
+class ServiceOrdersController extends GetxController {
   final ListServiceOrders _list;
   final UpdateOsStatus _updateStatus;
 
-  ServiceOrdersProvider(this._list, this._updateStatus);
+  ServiceOrdersController(this._list, this._updateStatus);
 
-  bool _loading = false;
-  String? _error;
-  List<ServiceOrder> _all = const [];
-  List<ServiceOrder> _filtered = const [];
-  OsStatus? _statusFilter;
-  String _query = '';
-
-  bool get loading => _loading;
-  String? get error => _error;
-  List<ServiceOrder> get items => _filtered;
-  OsStatus? get statusFilter => _statusFilter;
-  String get query => _query;
+  final RxBool loading = false.obs;
+  final RxnString error = RxnString();
+  final RxList<ServiceOrder> _all = <ServiceOrder>[].obs;
+  final RxList<ServiceOrder> items = <ServiceOrder>[].obs;
+  final Rxn<OsStatus> statusFilter = Rxn<OsStatus>();
+  final RxString query = ''.obs;
 
   // ────────── KPIs ──────────
   int get countAndamento =>
@@ -50,48 +44,40 @@ class ServiceOrdersProvider extends ChangeNotifier {
   }
 
   Future<void> load() async {
-    _loading = true;
-    _error = null;
-    notifyListeners();
+    loading.value = true;
+    error.value = null;
 
     final allResult = await _list(const ServiceOrderFilter());
     allResult.fold(
       onSuccess: (data) {
-        _all = data;
+        _all.assignAll(data);
       },
       onFailure: (f) {
-        _error = f.message;
+        error.value = f.message;
       },
     );
 
     await _applyFilter();
-    _loading = false;
-    notifyListeners();
+    loading.value = false;
   }
 
   Future<void> setStatusFilter(OsStatus? status) async {
-    _statusFilter = status;
+    statusFilter.value = status;
     await _applyFilter();
-    notifyListeners();
   }
 
   Future<void> setQuery(String q) async {
-    _query = q;
+    query.value = q;
     await _applyFilter();
-    notifyListeners();
   }
 
   Future<void> _applyFilter() async {
     final result = await _list(
-      ServiceOrderFilter(status: _statusFilter, query: _query),
+      ServiceOrderFilter(status: statusFilter.value, query: query.value),
     );
     result.fold(
-      onSuccess: (data) {
-        _filtered = data;
-      },
-      onFailure: (f) {
-        _error = f.message;
-      },
+      onSuccess: items.assignAll,
+      onFailure: (f) => error.value = f.message,
     );
   }
 
@@ -105,8 +91,7 @@ class ServiceOrdersProvider extends ChangeNotifier {
         return true;
       },
       onFailure: (f) {
-        _error = f.message;
-        notifyListeners();
+        error.value = f.message;
         return false;
       },
     );

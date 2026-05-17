@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
-import 'core/di/injection.dart';
 import 'core/routes/app_routes.dart';
 import 'core/theme/ordo_theme.dart';
 import 'features/service_order/presentation/pages/checklist_page.dart';
@@ -9,40 +8,20 @@ import 'features/service_order/presentation/pages/home_page.dart';
 import 'features/service_order/presentation/pages/nova_os_page.dart';
 import 'features/service_order/presentation/pages/os_detail_page.dart';
 import 'features/service_order/presentation/pages/os_list_page.dart';
-import 'features/service_order/presentation/providers/nova_os_provider.dart';
-import 'features/service_order/presentation/providers/service_order_detail_provider.dart';
-import 'features/service_order/presentation/providers/service_orders_provider.dart';
 import 'features/setup/presentation/pages/setup_page.dart';
 import 'features/setup/presentation/pages/splash_page.dart';
-import 'features/setup/presentation/providers/setup_provider.dart';
 
 class OrdoApp extends StatelessWidget {
   const OrdoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(
-          create: (_) => SetupProvider(sl(), sl()),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => ServiceOrdersProvider(sl(), sl()),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => ServiceOrderDetailProvider(sl(), sl(), sl()),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => NovaOsProvider(sl(), sl()),
-        ),
-      ],
-      child: MaterialApp(
-        title: 'Ordo',
-        debugShowCheckedModeBanner: false,
-        theme: OrdoTheme.light(),
-        initialRoute: AppRoutes.splash,
-        onGenerateRoute: _onGenerateRoute,
-      ),
+    return GetMaterialApp(
+      title: 'Ordo',
+      debugShowCheckedModeBanner: false,
+      theme: OrdoTheme.light(),
+      initialRoute: AppRoutes.splash,
+      onGenerateRoute: _onGenerateRoute,
     );
   }
 

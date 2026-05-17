@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:get/get.dart';
 
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/ordo_colors.dart';
@@ -10,7 +10,7 @@ import '../../../../shared/widgets/ordo_button.dart';
 import '../../../../shared/widgets/ordo_icon.dart';
 import '../../../../shared/widgets/top_bar.dart';
 import '../../domain/entities/checklist_item.dart';
-import '../providers/service_order_detail_provider.dart';
+import '../controllers/service_order_detail_controller.dart';
 
 class ChecklistPage extends StatefulWidget {
   final String orderId;
@@ -21,114 +21,124 @@ class ChecklistPage extends StatefulWidget {
 }
 
 class _ChecklistPageState extends State<ChecklistPage> {
+  final _detail = Get.find<ServiceOrderDetailController>();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ServiceOrderDetailProvider>().load(widget.orderId);
+      _detail.load(widget.orderId);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<ServiceOrderDetailProvider>();
-    final order = provider.order;
-
-    if (provider.loading || order == null) {
-      return const Scaffold(
-        backgroundColor: OrdoColors.bg,
-        body: Center(child: CircularProgressIndicator(color: OrdoColors.ink)),
-      );
-    }
-
-    final items = order.checklist;
-    final doneCount = order.checklistDoneCount;
-    final total = items.length;
-    final progress = total == 0 ? 0.0 : doneCount / total;
-
     return Scaffold(
       backgroundColor: OrdoColors.bg,
-      appBar: OrdoTopBar(
-        title: 'Checklist de entrada',
-        subtitle: 'OS #${order.id} · ${order.title}',
-        leading: OrdoIconButton(
-          ghost: true,
-          onTap: () => Navigator.of(context).maybePop(),
-          child: const OrdoIcon(OrdoIconName.chevronLeft, size: 22),
-        ),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(76),
+        child: Obx(() {
+          final order = _detail.order.value;
+          return OrdoTopBar(
+            title: 'Checklist de entrada',
+            subtitle:
+                order == null ? '' : 'OS #${order.id} · ${order.title}',
+            leading: OrdoIconButton(
+              ghost: true,
+              onTap: Get.back,
+              child: const OrdoIcon(OrdoIconName.chevronLeft, size: 22),
+            ),
+          );
+        }),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          OrdoSpacing.screenPadding,
-          0,
-          OrdoSpacing.screenPadding,
-          OrdoSpacing.s6,
-        ),
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Progresso',
-                style: OrdoTypography.body(
-                  size: 13,
-                  weight: FontWeight.w500,
-                  color: OrdoColors.fg2,
-                ),
-              ),
-              Text(
-                '$doneCount/$total',
-                style: OrdoTypography.mono(size: 13, weight: FontWeight.w600),
-              ),
-            ],
+      body: Obx(() {
+        final loading = _detail.loading.value;
+        final order = _detail.order.value;
+        if (loading || order == null) {
+          return const Center(
+            child: CircularProgressIndicator(color: OrdoColors.ink),
+          );
+        }
+
+        final items = order.checklist;
+        final doneCount = order.checklistDoneCount;
+        final total = items.length;
+        final progress = total == 0 ? 0.0 : doneCount / total;
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(
+            OrdoSpacing.screenPadding,
+            0,
+            OrdoSpacing.screenPadding,
+            OrdoSpacing.s6,
           ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(3),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 6,
-              backgroundColor: OrdoColors.border,
-              valueColor: const AlwaysStoppedAnimation(OrdoColors.ink),
-            ),
-          ),
-          const SizedBox(height: OrdoSpacing.s4),
-          for (final item in items) ...[
-            _ChecklistRow(
-              item: item,
-              onToggle: () => context
-                  .read<ServiceOrderDetailProvider>()
-                  .toggleChecklist(item.id),
-            ),
-            const SizedBox(height: 8),
-          ],
-          const SizedBox(height: OrdoSpacing.s4),
-          Row(
-            children: [
-              Expanded(
-                child: OrdoButton(
-                  label: 'Voltar',
-                  variant: OrdoButtonVariant.secondary,
-                  full: true,
-                  onPressed: () => Navigator.of(context).maybePop(),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OrdoButton(
-                  label: 'Concluir entrada',
-                  variant: OrdoButtonVariant.accent,
-                  full: true,
-                  onPressed: () => Navigator.of(context).pushReplacementNamed(
-                    AppRoutes.osDetail,
-                    arguments: order.id,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Progresso',
+                  style: OrdoTypography.body(
+                    size: 13,
+                    weight: FontWeight.w500,
+                    color: OrdoColors.fg2,
                   ),
                 ),
+                Text(
+                  '$doneCount/$total',
+                  style: OrdoTypography.mono(
+                    size: 13,
+                    weight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(3),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 6,
+                backgroundColor: OrdoColors.border,
+                valueColor: const AlwaysStoppedAnimation(OrdoColors.ink),
               ),
+            ),
+            const SizedBox(height: OrdoSpacing.s4),
+            for (final item in items) ...[
+              _ChecklistRow(
+                item: item,
+                onToggle: () => _detail.toggleChecklist(item.id),
+              ),
+              const SizedBox(height: 8),
             ],
-          ),
-        ],
-      ),
+            const SizedBox(height: OrdoSpacing.s4),
+            Row(
+              children: [
+                Expanded(
+                  child: OrdoButton(
+                    label: 'Voltar',
+                    variant: OrdoButtonVariant.secondary,
+                    full: true,
+                    onPressed: Get.back,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OrdoButton(
+                    label: 'Concluir entrada',
+                    variant: OrdoButtonVariant.accent,
+                    full: true,
+                    onPressed: () => Get.offNamed(
+                      AppRoutes.osDetail,
+                      arguments: order.id,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      }),
     );
   }
 }
@@ -179,10 +189,7 @@ class _ChecklistRow extends StatelessWidget {
                     : OrdoColors.slate100,
                 border: item.photoCount > 0
                     ? null
-                    : Border.all(
-                        color: OrdoColors.borderStrong,
-                        style: BorderStyle.solid,
-                      ),
+                    : Border.all(color: OrdoColors.borderStrong),
                 borderRadius: BorderRadius.circular(8),
               ),
               alignment: Alignment.center,
