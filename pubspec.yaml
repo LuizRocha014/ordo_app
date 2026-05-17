@@ -1,0 +1,48 @@
+name: ordo_app
+description: "Ordo — Sua oficina, sob controle. App de Ordens de Serviço para oficinas (carros, celulares, notebooks, eletrodomésticos)."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.5.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+
+  # Componentes base reutilizados (Storage, Navigator, Formatters, Masks, etc.)
+  componentes_lr:
+    path: ../Flutter_X_Components_Flutter
+
+  # State management + DI
+  provider: ^6.1.2
+  get_it: ^7.7.0
+
+  # HTTP
+  http: ^1.2.1
+
+  # Tipografia Ordo (Space Grotesk, DM Sans, JetBrains Mono via Google Fonts CDN)
+  google_fonts: ^6.2.1
+
+  # Datas em PT-BR
+  intl: ^0.20.2
+
+  # Normalização de acentos (busca case/diacritic-insensitive)
+  diacritic: ^0.1.4
+
+  # Funcionalidades equivalentes às já oferecidas pelo pacote, expostas
+  # de forma direta para uso no app.
+  shared_preferences: ^2.2.2
+  flutter_svg: ^2.0.10+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/svg/
