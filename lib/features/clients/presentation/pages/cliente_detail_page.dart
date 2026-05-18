@@ -10,8 +10,15 @@ import '../../../../shared/utils/formatters.dart';
 import '../../../../shared/widgets/ordo_icon.dart';
 import '../../../../shared/widgets/os_card.dart';
 import '../../../../shared/widgets/top_bar.dart';
+import '../../../service_order/domain/entities/address.dart';
+import '../../../service_order/domain/entities/client.dart';
 import '../../../service_order/domain/entities/os_status.dart';
 import '../controllers/client_detail_controller.dart';
+
+bool _hasContactInfo(Client c) =>
+    (c.email != null && c.email!.isNotEmpty) ||
+    (c.cpf != null && c.cpf!.isNotEmpty) ||
+    c.address != null;
 
 class ClienteDetailPage extends StatefulWidget {
   final String clientId;
@@ -106,6 +113,14 @@ class _ClienteDetailPageState extends State<ClienteDetailPage> {
               entregues: entregues,
               valorTotal: totalCents,
             ),
+            if (_hasContactInfo(client)) ...[
+              const SizedBox(height: OrdoSpacing.s4),
+              _ContactCard(
+                email: client.email,
+                cpf: client.cpf,
+                address: client.address,
+              ),
+            ],
             const SizedBox(height: OrdoSpacing.s5),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -389,6 +404,129 @@ class _Divider extends StatelessWidget {
       height: 28,
       margin: const EdgeInsets.symmetric(horizontal: 10),
       color: OrdoColors.border,
+    );
+  }
+}
+
+class _ContactCard extends StatelessWidget {
+  final String? email;
+  final String? cpf;
+  final Address? address;
+
+  const _ContactCard({this.email, this.cpf, this.address});
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[];
+    if (email != null && email!.isNotEmpty) {
+      rows.add(_ContactRow(
+        icon: OrdoIconName.messageCircle,
+        label: 'EMAIL',
+        value: email!,
+      ));
+    }
+    if (cpf != null && cpf!.isNotEmpty) {
+      rows.add(_ContactRow(
+        icon: OrdoIconName.fileText,
+        label: 'CPF',
+        value: cpf!,
+        mono: true,
+      ));
+    }
+    if (address != null) {
+      rows.add(_ContactRow(
+        icon: OrdoIconName.home,
+        label: 'ENDEREÇO',
+        value: address!.oneLine,
+      ));
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: OrdoColors.paper,
+        borderRadius: BorderRadius.circular(OrdoRadius.md),
+        border: Border.all(color: OrdoColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) ...[
+              const SizedBox(height: 12),
+              Container(height: 1, color: OrdoColors.border),
+              const SizedBox(height: 12),
+            ],
+            rows[i],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ContactRow extends StatelessWidget {
+  final OrdoIconName icon;
+  final String label;
+  final String value;
+  final bool mono;
+
+  const _ContactRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.mono = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: OrdoColors.slate100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          alignment: Alignment.center,
+          child: OrdoIcon(icon, size: 16, color: OrdoColors.ink),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: OrdoTypography.body(
+                  size: 10,
+                  weight: FontWeight.w600,
+                  color: OrdoColors.fg3,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: mono
+                    ? OrdoTypography.mono(
+                        size: 13,
+                        weight: FontWeight.w500,
+                        color: OrdoColors.ink,
+                      )
+                    : OrdoTypography.body(
+                        size: 13,
+                        color: OrdoColors.ink,
+                        height: 1.35,
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

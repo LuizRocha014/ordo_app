@@ -21,13 +21,19 @@ class OrdoBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.bottomCenter,
-      clipBehavior: Clip.none,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 22),
-          child: Container(
+    // SizedBox de 160px garante que o FAB (positioned em bottom: 88) caia
+    // dentro dos limites de hit-test do widget. Antes ficava de fora —
+    // visível mas inatingível por toque, porque o clip era `Clip.none`
+    // mas o tamanho do Stack era só ~80px.
+    return SizedBox(
+      height: 160,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        clipBehavior: Clip.none,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 22),
+            child: Container(
             decoration: BoxDecoration(
               color: OrdoColors.paper,
               border: Border.all(color: OrdoColors.border),
@@ -69,13 +75,14 @@ class OrdoBottomNav extends StatelessWidget {
             ),
           ),
         ),
-        if (onNew != null)
-          Positioned(
-            right: 20,
-            bottom: 88,
-            child: _OrdoFab(onPressed: onNew!),
-          ),
-      ],
+          if (onNew != null)
+            Positioned(
+              right: 20,
+              bottom: 88,
+              child: _OrdoFab(onPressed: onNew!),
+            ),
+        ],
+      ),
     );
   }
 }

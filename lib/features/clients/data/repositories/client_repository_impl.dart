@@ -1,5 +1,6 @@
 import '../../../../core/errors/failures.dart';
 import '../../../../core/result/result.dart';
+import '../../../service_order/domain/entities/address.dart';
 import '../../../service_order/domain/entities/client.dart';
 import '../../domain/repositories/client_repository.dart';
 import '../datasources/client_local_datasource.dart';
@@ -36,6 +37,9 @@ class ClientRepositoryImpl implements ClientRepository {
   Future<Result<Client>> create({
     required String name,
     required String phone,
+    String? email,
+    String? cpf,
+    Address? address,
     String? notes,
   }) async {
     final trimmedName = name.trim();
@@ -54,6 +58,9 @@ class ClientRepositoryImpl implements ClientRepository {
       final c = await _ds.create(
         name: trimmedName,
         phone: trimmedPhone,
+        email: email?.trim().isEmpty == true ? null : email?.trim(),
+        cpf: cpf?.trim().isEmpty == true ? null : cpf?.trim(),
+        address: address,
         notes: notes,
       );
       return Success(c);

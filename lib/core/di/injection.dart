@@ -1,13 +1,18 @@
 import 'package:get/get.dart';
 import 'package:get_it/get_it.dart';
+import 'package:http/http.dart' as http;
 
 import '../../features/auth/presentation/controllers/login_controller.dart';
+import '../../features/clients/data/datasources/cep_remote_datasource.dart';
 import '../../features/clients/data/datasources/client_local_datasource.dart';
+import '../../features/clients/data/repositories/cep_repository_impl.dart';
 import '../../features/clients/data/repositories/client_repository_impl.dart';
+import '../../features/clients/domain/repositories/cep_repository.dart';
 import '../../features/clients/domain/repositories/client_repository.dart';
 import '../../features/clients/domain/usecases/create_client.dart';
 import '../../features/clients/domain/usecases/get_client.dart';
 import '../../features/clients/domain/usecases/list_clients.dart';
+import '../../features/clients/domain/usecases/lookup_cep.dart';
 import '../../features/clients/presentation/controllers/client_detail_controller.dart';
 import '../../features/clients/presentation/controllers/clients_controller.dart';
 import '../../features/service_order/data/datasources/mock_seed.dart';
@@ -76,6 +81,14 @@ void _registerCore() {
   sl.registerFactory(() => ListClients(sl()));
   sl.registerFactory(() => GetClient(sl()));
   sl.registerFactory(() => CreateClient(sl()));
+
+  // ────────── CEP / ViaCEP ──────────
+  sl.registerLazySingleton<http.Client>(() => http.Client());
+  sl.registerLazySingleton<CepRemoteDataSource>(
+    () => ViaCepDataSource(client: sl()),
+  );
+  sl.registerLazySingleton<CepRepository>(() => CepRepositoryImpl(sl()));
+  sl.registerFactory(() => LookupCep(sl()));
 }
 
 void _registerControllers() {
@@ -99,7 +112,7 @@ void _registerControllers() {
     fenix: true,
   );
   Get.lazyPut<ClientsController>(
-    () => ClientsController(sl(), sl()),
+    () => ClientsController(sl(), sl(), sl()),
     fenix: true,
   );
   Get.lazyPut<ClientDetailController>(

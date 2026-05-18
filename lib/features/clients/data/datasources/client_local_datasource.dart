@@ -1,3 +1,4 @@
+import '../../../service_order/domain/entities/address.dart';
 import '../../../service_order/domain/entities/client.dart';
 
 /// Datasource local — mantém uma "tabela" em memória de clientes.
@@ -7,6 +8,9 @@ abstract class ClientLocalDataSource {
   Future<Client> create({
     required String name,
     required String phone,
+    String? email,
+    String? cpf,
+    Address? address,
     String? notes,
   });
 }
@@ -42,10 +46,20 @@ class InMemoryClientDataSource implements ClientLocalDataSource {
   Future<Client> create({
     required String name,
     required String phone,
+    String? email,
+    String? cpf,
+    Address? address,
     String? notes,
   }) async {
     _seq += 1;
-    final c = Client(id: 'cli-$_seq', name: name, phone: phone);
+    final c = Client(
+      id: 'cli-$_seq',
+      name: name,
+      phone: phone,
+      email: email,
+      cpf: cpf,
+      address: address,
+    );
     _store[c.id] = c;
     return c;
   }
