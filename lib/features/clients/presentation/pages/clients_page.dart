@@ -61,11 +61,6 @@ class _ClientsPageState extends State<ClientsPage> {
         child: Obx(() => OrdoTopBar(
               title: 'Clientes',
               subtitle: '${_controller.items.length} cadastrados',
-              leading: OrdoIconButton(
-                ghost: true,
-                onTap: Get.back,
-                child: const OrdoIcon(OrdoIconName.chevronLeft, size: 22),
-              ),
             )),
       ),
       body: Stack(

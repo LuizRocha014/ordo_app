@@ -96,11 +96,6 @@ class SettingsPage extends StatelessWidget {
           return OrdoTopBar(
             title: 'Ajustes',
             subtitle: shop?.shopName ?? 'Ordo',
-            leading: OrdoIconButton(
-              ghost: true,
-              onTap: Get.back,
-              child: const OrdoIcon(OrdoIconName.chevronLeft, size: 22),
-            ),
           );
         }),
       ),

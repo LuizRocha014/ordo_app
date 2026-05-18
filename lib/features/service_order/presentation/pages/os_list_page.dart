@@ -58,11 +58,6 @@ class _OsListPageState extends State<OsListPage> {
           return OrdoTopBar(
             title: 'OS de $productPlural',
             subtitle: '${_orders.items.length} resultados',
-            leading: OrdoIconButton(
-              ghost: true,
-              onTap: Get.back,
-              child: const OrdoIcon(OrdoIconName.chevronLeft, size: 22),
-            ),
             trailing: [
               OrdoIconButton(
                 onTap: () {},
