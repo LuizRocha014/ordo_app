@@ -5,9 +5,10 @@ import 'package:get/get.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/theme/ordo_colors.dart';
 import '../../../../core/theme/ordo_typography.dart';
+import '../../../auth/presentation/controllers/login_controller.dart';
 import '../controllers/setup_controller.dart';
 
-/// Splash que dispara `bootstrap()` e decide entre Setup e Home.
+/// Splash que carrega o shop ativo e decide entre Login e Home.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -23,10 +24,11 @@ class _SplashPageState extends State<SplashPage> {
   }
 
   Future<void> _decide() async {
-    final setup = Get.find<SetupController>();
-    await setup.bootstrap();
+    Get.find<SetupController>().bootstrap();
+    final auth = Get.find<LoginController>();
+    await Future<void>.delayed(const Duration(milliseconds: 200));
     if (!mounted) return;
-    Get.offNamed(setup.isConfigured ? AppRoutes.home : AppRoutes.setup);
+    Get.offNamed(auth.isLoggedIn ? AppRoutes.home : AppRoutes.login);
   }
 
   @override

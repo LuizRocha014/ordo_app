@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 
+import '../../../clients/domain/usecases/create_client.dart';
 import '../../domain/entities/checklist_item.dart';
 import '../../domain/entities/client.dart';
 import '../../domain/entities/os_status.dart';
@@ -13,11 +14,16 @@ import '../../domain/usecases/get_checklist_template.dart';
 /// Os campos são mutáveis comuns (não-Rx) porque vivem em `TextField`
 /// controllers e só importam no momento de `submit()`. Os flags
 /// reativos (`saving`, `error`, `created`) sim são `.obs`.
+///
+/// Ao submeter, primeiro registra o cliente via `CreateClient` (assim
+/// ele aparece na lista de clientes mesmo se a OS for o primeiro
+/// contato) e depois usa o cliente retornado na OS.
 class NovaOsController extends GetxController {
   final CreateServiceOrder _create;
   final GetChecklistTemplate _template;
+  final CreateClient _createClient;
 
-  NovaOsController(this._create, this._template);
+  NovaOsController(this._create, this._template, this._createClient);
 
   String clientName = '';
   String clientPhone = '';
@@ -64,16 +70,30 @@ class NovaOsController extends GetxController {
     saving.value = true;
     error.value = null;
 
+    final clientResult = await _createClient(
+      CreateClientParams(
+        name: clientName.trim(),
+        phone: clientPhone.trim(),
+      ),
+    );
+    final Client? client = clientResult.fold(
+      onSuccess: (c) => c,
+      onFailure: (f) {
+        error.value = f.message;
+        return null;
+      },
+    );
+    if (client == null) {
+      saving.value = false;
+      return false;
+    }
+
     final now = DateTime.now();
     final draft = ServiceOrder(
       id: '',
       title: _buildTitle(shopTypeId),
       category: shopTypeId,
-      client: Client(
-        id: 'cli-${now.millisecondsSinceEpoch}',
-        name: clientName.trim(),
-        phone: clientPhone.trim(),
-      ),
+      client: client,
       problem: problem.trim(),
       status: OsStatus.aberta,
       valueCents: 0,

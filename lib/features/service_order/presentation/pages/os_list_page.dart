@@ -36,8 +36,12 @@ class _OsListPageState extends State<OsListPage> {
         Get.offNamed(AppRoutes.home);
         break;
       case OrdoTab.list:
+        break;
       case OrdoTab.clients:
+        Get.offNamed(AppRoutes.clients);
+        break;
       case OrdoTab.settings:
+        Get.offNamed(AppRoutes.settings);
         break;
     }
   }

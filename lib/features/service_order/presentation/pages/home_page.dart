@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 
 import '../../../../core/routes/app_routes.dart';
@@ -34,8 +35,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _onTab(OrdoTab tab) {
-    if (tab == OrdoTab.list) {
-      Get.toNamed(AppRoutes.osList);
+    switch (tab) {
+      case OrdoTab.home:
+        break;
+      case OrdoTab.list:
+        Get.offNamed(AppRoutes.osList);
+        break;
+      case OrdoTab.clients:
+        Get.offNamed(AppRoutes.clients);
+        break;
+      case OrdoTab.settings:
+        Get.offNamed(AppRoutes.settings);
+        break;
     }
   }
 
@@ -52,6 +63,11 @@ class _HomePageState extends State<HomePage> {
           return OrdoTopBar(
             title: 'Boa tarde, Bruno',
             subtitle: '$shopName · $shopSubtitle',
+            leading: SvgPicture.asset(
+              'assets/svg/logo-mark.svg',
+              width: 36,
+              height: 36,
+            ),
             trailing: [
               OrdoIconButton(
                 badgeColor: OrdoColors.lime,

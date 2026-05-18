@@ -19,12 +19,15 @@ class OrdoField extends StatefulWidget {
   final String? errorText;
   final bool mono;
   final bool multiline;
+  final bool obscureText;
   final TextInputType? keyboardType;
   final List<TextInputFormatter>? inputFormatters;
   final ValueChanged<String>? onChanged;
   final int? maxLength;
   final FormFieldValidator<String>? validator;
   final bool autovalidate;
+  final TextInputAction? textInputAction;
+  final ValueChanged<String>? onSubmitted;
 
   const OrdoField({
     super.key,
@@ -35,12 +38,15 @@ class OrdoField extends StatefulWidget {
     this.errorText,
     this.mono = false,
     this.multiline = false,
+    this.obscureText = false,
     this.keyboardType,
     this.inputFormatters,
     this.onChanged,
     this.maxLength,
     this.validator,
     this.autovalidate = true,
+    this.textInputAction,
+    this.onSubmitted,
   });
 
   @override
@@ -118,13 +124,16 @@ class _OrdoFieldState extends State<OrdoField> {
           child: TextFormField(
             controller: widget.controller,
             focusNode: _focus,
-            maxLines: widget.multiline ? 4 : 1,
-            minLines: widget.multiline ? 3 : 1,
+            obscureText: widget.obscureText,
+            maxLines: widget.obscureText ? 1 : (widget.multiline ? 4 : 1),
+            minLines: widget.obscureText ? 1 : (widget.multiline ? 3 : 1),
             keyboardType: widget.keyboardType ??
                 (widget.multiline ? TextInputType.multiline : TextInputType.text),
             inputFormatters: widget.inputFormatters,
             maxLength: widget.maxLength,
             onChanged: widget.onChanged,
+            onFieldSubmitted: widget.onSubmitted,
+            textInputAction: widget.textInputAction,
             validator: widget.validator,
             autovalidateMode: widget.autovalidate
                 ? AutovalidateMode.onUserInteraction

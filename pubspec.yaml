@@ -14,7 +14,7 @@ dependencies:
 
   # Componentes base reutilizados (Storage, Navigator, Formatters, Masks, etc.)
   componentes_lr:
-    path: ../Flutter_X_Components_Flutter
+    path: C:\Repository\Flutter_X_Components_Flutter
 
   # State management + navegação reativa
   get: ^4.6.6
